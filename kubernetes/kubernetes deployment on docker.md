@@ -38,7 +38,9 @@ openssl can also be use to manually generate certificates for your cluster.
 ```
 echo 123456,admin,qinghua > /root/openssl/basic_auth.csv
 ```
- 
+## 安装etcd和flannel服务
+参考：http://qinghua.github.io/kubernetes-installation/
+
 ## 启动kubernetes master服务
 1 启动apiserver
 ```
