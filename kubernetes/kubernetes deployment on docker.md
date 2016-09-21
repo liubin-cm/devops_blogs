@@ -1,79 +1,100 @@
-#×¢ÒâÊÂÏî
-kubernetes 1.3.7ÒÀÀµdocker 1.10ÒÔÉÏ°æ±¾£¬ĞèÒªÏÈÉı¼¶dockerÎª×îĞÂ°æ±¾¡£
-¡¤[root@k8s1-master ~]# docker --version
-Docker version 1.10.3, build cb079f6-unsupported¡¤
+#æ³¨æ„äº‹é¡¹
+kubernetes 1.3.7ä¾èµ–docker 1.10ä»¥ä¸Šç‰ˆæœ¬ï¼Œéœ€è¦å…ˆå‡çº§dockerä¸ºæœ€æ–°ç‰ˆæœ¬ã€‚
+```
+[root@k8s1-master ~]# docker --version
+Docker version 1.10.3, build cb079f6-unsupported
+```
 
 # kubernetes master setup
-## ÏÂÔØ·şÎñ¶Ë¾µÏñ
-download apiserver, controller manager, scheduler
-commands:
+## ä¸‹è½½æœåŠ¡ç«¯é•œåƒ
+download apiserver, controller manager, scheduler, å‘½ä»¤è¡Œå¦‚ä¸‹:
+```
 1. docker pull liubin248/kubernetes-apiserver
 2. docker pull liubin248/kube-controller-manager
 3. docker pull liubin248/kube-scheduler
+```
 
-## ´´½¨caÖ¤Êé
-²Î¿¼£ºhttp://kubernetes.io/docs/admin/authentication/
-Ê¹ÓÃopensslµÄ·½Ê½½øĞĞ´´½¨£º
+## åˆ›å»ºcaè¯ä¹¦
+å‚è€ƒï¼šhttp://kubernetes.io/docs/admin/authentication/
+ä½¿ç”¨opensslçš„æ–¹å¼è¿›è¡Œåˆ›å»ºï¼š
+```
 openssl can also be use to manually generate certificates for your cluster.
 1. Generate a ca.key with 2048bit:
-  ¡¤openssl genrsa -out ca.key 2048¡¤
+  Â·openssl genrsa -out ca.key 2048Â·
 2. According to the ca.key generate a ca.crt (use -days to set the certificate effective time):
-  ¡¤openssl req -x509 -new -nodes -key ca.key -subj "/CN=${MASTER_IP}" -days 10000 -out ca.crt¡¤
+  Â·openssl req -x509 -new -nodes -key ca.key -subj "/CN=${MASTER_IP}" -days 10000 -out ca.crtÂ·
 3. Generate a server.key with 2048bit
-  ¡¤openssl genrsa -out server.key 2048¡¤
+  Â·openssl genrsa -out server.key 2048Â·
 4. According to the server.key generate a server.csr:
-  ¡¤openssl req -new -key server.key -subj "/CN=${MASTER_IP}" -out server.csr¡¤
+  Â·openssl req -new -key server.key -subj "/CN=${MASTER_IP}" -out server.csrÂ·
 5. According to the ca.key, ca.crt and server.csr generate the server.crt:
-  ¡¤openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 10000¡¤
+  Â·openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 10000Â·
 6. View the certificate.
-  ¡¤openssl x509  -noout -text -in ./server.crt¡¤
-ÉÏÊöcaÖ¤ÊéÉú³ÉÔÚ/root/opensslÄ¿Â¼ÏÂ¡£  
+  Â·openssl x509  -noout -text -in ./server.crtÂ·
+```
+ä¸Šè¿°caè¯ä¹¦ç”Ÿæˆåœ¨/root/opensslç›®å½•ä¸‹ã€‚  
 
-## Éú³ÉÓÃ»§ÃûÃÜÂë
-¡¤echo 123456,admin,qinghua > /root/openssl/basic_auth.csv¡¤  
+## ç”Ÿæˆç”¨æˆ·åå¯†ç 
+```
+echo 123456,admin,qinghua > /root/openssl/basic_auth.csv
+```
  
-## Æô¶¯kubernetes master·şÎñ
-1. Æô¶¯apiserver
-`docker run -d --name=apiserver --net=host -v /root/openssl:/security docker.io/liubin248/kubernetes-apiserver kube-apiserver --logtostderr=true --v=0 --etcd-servers=http://127.0.0.1:2379 --insecure-bind-address=0.0.0.0 --kubelet-port=10250 --allow-privileged=false --service-cluster-ip-range=10.254.0.0/16 --admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,ResourceQuota --secure-port=443 --tls-cert-file=/security/server.crt --tls-private-key-file=/security/server.key --secure-port=443 --basic-auth-file=/security/basic_auth.csv`
-ÆäÖĞ
+## å¯åŠ¨kubernetes masteræœåŠ¡
+1 å¯åŠ¨apiserver
+```
+docker run -d --name=apiserver --net=host -v /root/openssl:/security docker.io/liubin248/kubernetes-apiserver kube-apiserver --logtostderr=true --v=0 --etcd-servers=http://127.0.0.1:2379 --insecure-bind-address=0.0.0.0 --kubelet-port=10250 --allow-privileged=false --service-cluster-ip-range=10.254.0.0/16 --admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,ResourceQuota --secure-port=443 --tls-cert-file=/security/server.crt --tls-private-key-file=/security/server.key --secure-port=443 --basic-auth-file=/security/basic_auth.csv
+```
 
-2. Æô¶¯controller-manager
-`docker run -d --name=cm -v /root/openssl:/security docker.io/liubin248/kube-controller-manager kube-controller-manager --master=$apiservermaster:8080 --v=0 --root-ca-file=/security/ca.crt --service-account-private-key-file=/security/server.key`
+2 å¯åŠ¨controller-manager
+```
+docker run -d --name=cm -v /root/openssl:/security docker.io/liubin248/kube-controller-manager kube-controller-manager --master=$apiservermaster:8080 --v=0 --root-ca-file=/security/ca.crt --service-account-private-key-file=/security/server.key
+```
 
-3. Æô¶¯scheduler
-`docker run -d --name=scheduler docker.io/liubin248/kube-scheduler kube-scheduler --master=$apiservermaster:8080`
-ÆäÖĞ$apiservermasterĞèÒªÌæ»»ÎªÊµ¼ÊipµØÖ·
+3 å¯åŠ¨scheduler
+```
+docker run -d --name=scheduler docker.io/liubin248/kube-scheduler kube-scheduler --master=$apiservermaster:8080
+```
+å…¶ä¸­$apiservermasteréœ€è¦æ›¿æ¢ä¸ºå®é™…ipåœ°å€
 
 # kubernetes client setup
-## ÏÂÔØhyperkube¾µÏñ²¢¿½±´¿ÉÖ´ĞĞÎÄ¼şµ½ËŞÖ÷»ú
-ÃüÁî£º
-¡¤docker pull liubin248/hyperkube¡¤
+## ä¸‹è½½hyperkubeé•œåƒå¹¶æ‹·è´å¯æ‰§è¡Œæ–‡ä»¶åˆ°å®¿ä¸»æœº
+å‘½ä»¤ï¼š
+```
+docker pull liubin248/hyperkube
+```
 
-## ÔËĞĞÈİÆ÷²¢½«hyperkube¿½±´µ½¿Í»§»ú
-²Ù×÷²½ÖèÈçÏÂ£º
-1. ÔËĞĞhyperkubeÈİÆ÷
-¡¤docker run --net=host -d --name=kubeproxy -v /var/lib/docker:/var/lib/docker:rw docker.io/liubin248/hyperkube /hyperkube proxy --master=http://$apiservermaster:8080¡¤
-2. ½â³ıselinuxÏŞÖÆ
-`chcon -Rt svirt_sandbox_file_t /var/lib/docker`
-3. ½øĞĞÈİÆ÷
-`docker exec -ti kubeproxy /bin/bash`
-4. ¿½±´hyperkube¶ş½øÖÆÎÄ¼ş
-`cp /hyperkube /var/lib/docker`
+## è¿è¡Œå®¹å™¨å¹¶å°†hyperkubeæ‹·è´åˆ°å®¢æˆ·æœº
+æ“ä½œæ­¥éª¤å¦‚ä¸‹ï¼š
+```
+1. è¿è¡Œhyperkubeå®¹å™¨
+docker run --net=host -d --name=kubeproxy -v /var/lib/docker:/var/lib/docker:rw docker.io/liubin248/hyperkube /hyperkube proxy --master=http://$apiservermaster:8080
+2. è§£é™¤selinuxé™åˆ¶
+chcon -Rt svirt_sandbox_file_t /var/lib/docker
+3. è¿›è¡Œå®¹å™¨
+docker exec -ti kubeproxy /bin/bash
+4. æ‹·è´hyperkubeäºŒè¿›åˆ¶æ–‡ä»¶
+cp /hyperkube /var/lib/docker
+```
 
-## ¿Í»§»úÔËĞĞhyperkube
-1. ºóÌ¨ÔËĞĞkubelet·şÎñ
-`nohup /var/lib/docker/hyperkube kubelet --api_servers=http://$apiservermaster:8080 --pod-infra-container-image=registry.access.redhat.com/rhel7/pod-infrastructure:latest --cluster_dns=10.254.210.250 --cluster_domain=cluster.local --hostname_override=$nodeName &`
-ÆäÖĞnodeNameÎª¿Í»§»úÃû×Ö
+## å®¢æˆ·æœºè¿è¡Œhyperkube
+```
+1. åå°è¿è¡ŒkubeletæœåŠ¡
+nohup /var/lib/docker/hyperkube kubelet --api_servers=http://$apiservermaster:8080 --pod-infra-container-image=registry.access.redhat.com/rhel7/pod-infrastructure:latest --cluster_dns=10.254.210.250 --cluster_domain=cluster.local --hostname_override=$nodeName &
+å…¶ä¸­nodeNameä¸ºå®¢æˆ·æœºåå­—
 
-2. ºóÌ¨ÔËĞĞproxy·şÎñ
-`/var/lib/docker/hyperkube proxy --master=http://$apiservermaster:8080`
+2. åå°è¿è¡ŒproxyæœåŠ¡
+/var/lib/docker/hyperkube proxy --master=http://$apiservermaster:8080
+```
 
-# kubectlµÄ°²×°Ê¹ÓÃ
-kubectlÒ²¿ÉÒÔÊ¹ÓÃhyperkubeÀïÃæµÄÖ¸Áî
-¡¤/var/lib/docker/hyperkube kubectl¡¤
+# kubectlçš„å®‰è£…ä½¿ç”¨
+kubectlä¹Ÿå¯ä»¥ä½¿ç”¨hyperkubeé‡Œé¢çš„æŒ‡ä»¤
+```
+/var/lib/docker/hyperkube kubectl commands
+```
+å…¶ä¸­commandséœ€è¦æ›¿æ¢ä¸ºå®é™…å‚æ•°
 
 # kubenetes trouble shooting
-ÉÏÊö°²×°¹ı³ÌÃ»ÓĞ½«ÈÕÖ¾Êä³öµ½±ê×¼Êä³ö£¬Ò²Ã»ÓĞÊä³öµ½ÈÕÖ¾ÎÄ¼ş£¬²»·½±ãkubernetes¹ÊÕÏ¶¨Î»£¬ÔÚÊµ¼Ê°²×°¹ı³ÌÖĞ£¬»¹ĞèÒª¶ÔÈÕÖ¾½øĞĞÖ¸¶¨Êä³ö¡£
+ä¸Šè¿°å®‰è£…è¿‡ç¨‹æ²¡æœ‰å°†æ—¥å¿—è¾“å‡ºåˆ°æ ‡å‡†è¾“å‡ºï¼Œä¹Ÿæ²¡æœ‰è¾“å‡ºåˆ°æ—¥å¿—æ–‡ä»¶ï¼Œä¸æ–¹ä¾¿kubernetesæ•…éšœå®šä½ï¼Œåœ¨å®é™…å®‰è£…è¿‡ç¨‹ä¸­ï¼Œè¿˜éœ€è¦å¯¹æ—¥å¿—è¿›è¡ŒæŒ‡å®šè¾“å‡ºã€‚
 
-#²Î¿¼
+#å‚è€ƒ
 http://qinghua.github.io/kubernetes-security/
