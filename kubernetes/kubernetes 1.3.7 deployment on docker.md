@@ -69,7 +69,7 @@ docker pull liubin248/hyperkube
 操作步骤如下：
 ```
 1. 运行hyperkube容器
-docker run --net=host -d --name=kubeproxy -v /var/lib/docker:/var/lib/docker:rw docker.io/liubin248/hyperkube /hyperkube proxy --master=http://$apiservermaster:8080
+docker run --net=host -d --name=kubeproxy --privileged=true -v /var/lib/docker:/var/lib/docker:rw docker.io/liubin248/hyperkube /hyperkube proxy --master=http://$apiservermaster:8080
 2. 解除selinux限制
 chcon -Rt svirt_sandbox_file_t /var/lib/docker
 3. 进行容器
